@@ -2,9 +2,13 @@ package com.example.scanner_test3;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -51,7 +55,7 @@ public class MainActivity extends ActionBarActivity {
 	private static int TAKE_PICTURE = 1;
 	private Uri imageUri;
 	ImageView imageView, debug_imageView;
-	Button change;
+	Button change, success, fail, flip;
 	private static boolean flag = true;   
     private static boolean isFirst = true;
     Bitmap srcBitmap;  
@@ -79,6 +83,9 @@ public class MainActivity extends ActionBarActivity {
         imageView = (ImageView)findViewById(R.id.image);
         debug_imageView = (ImageView)findViewById(R.id.debug_image);
         change = (Button) findViewById(R.id.change);
+        success = (Button) findViewById(R.id.success);
+        fail = (Button) findViewById(R.id.fail);
+        flip = (Button) findViewById(R.id.flip);
         
     }
     
@@ -109,7 +116,7 @@ public class MainActivity extends ActionBarActivity {
 	protected void takePhoto(View v) {
 		// TODO Auto-generated method stub
 		Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-		File photo = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/scanner_test2_pic.jpg");
+		File photo = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/scanner_test3_pic.jpg");
 		imageUri = Uri.fromFile(photo);
 		intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
 		startActivityForResult(intent, TAKE_PICTURE);
@@ -123,6 +130,8 @@ public class MainActivity extends ActionBarActivity {
         // call the parent
         super.onActivityResult(requestCode, resultCode, data);
         
+        success.setVisibility(View.VISIBLE);
+        fail.setVisibility(View.VISIBLE);
         imageView.setVisibility(View.VISIBLE);
         debug_imageView.setVisibility(View.VISIBLE);
         change.setVisibility(View.VISIBLE);
@@ -130,8 +139,112 @@ public class MainActivity extends ActionBarActivity {
         showPic();
         imageView.setImageBitmap(srcBitmap); 
         change.setOnClickListener(new ProcessClickListener());
+        success.setOnClickListener(new SuccessListener());
+        fail.setOnClickListener(new FailListener());
+        flip.setOnClickListener(new FlipListerner());
     } 
+	private class FlipListerner implements OnClickListener{
 
+		@Override
+		public void onClick(View v) {
+			// TODO Auto-generated method stub
+			Mat rgbMat = new Mat(); 
+	    	int dst_width = 1000;
+	        int dst_height = 600;
+	        
+	        Utils.bitmapToMat(processBitmap, rgbMat);
+	        processBitmap = Bitmap.createBitmap((int)dst_width,(int)dst_height, Config.RGB_565);
+	        
+            Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
+            Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
+            
+
+            src_mat.put(0,0, 1000,600, 0,600, 1000,0, 0,0);
+
+ 
+            dst_mat.put(0,0, 0,0,dst_width,0, 0,dst_height, dst_width,dst_height);
+            Mat tempMat = Imgproc.getPerspectiveTransform(src_mat, dst_mat);
+            Mat dstMat=rgbMat.clone();
+            Imgproc.warpPerspective(rgbMat, dstMat, tempMat, new Size(dst_width,dst_height));
+            Utils.matToBitmap(dstMat, processBitmap);
+            imageView.setImageBitmap(processBitmap);
+		}
+		
+	}
+	private class SuccessListener implements OnClickListener{
+
+		@Override
+		public void onClick(View v) {
+			// TODO Auto-generated method stub
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+			String currentDateandTime = sdf.format(new Date());
+			Bitmap temp = BitmapFactory.decodeFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+	        		+"/scanner_test3_pic.jpg");
+
+			
+			
+			FileOutputStream out = null;
+			try {
+				File outf = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) +"/success_"+currentDateandTime+".jpg");
+				outf.createNewFile();
+				out = new FileOutputStream(outf);
+			    temp.compress(Bitmap.CompressFormat.JPEG, 100, out); // bmp is your Bitmap instance
+			    // PNG is a lossless format, the compression factor (100) is ignored
+			} catch (Exception e) {
+			    e.printStackTrace();
+			} finally {
+			    try {
+			        if (out != null) {
+			            out.close();
+			        }
+			    } catch (IOException e) {
+			        e.printStackTrace();
+			    }
+			}
+			
+			success.setVisibility(View.GONE);
+			fail.setVisibility(View.GONE);
+			
+			
+		}
+		
+	}
+	private class FailListener implements OnClickListener{
+
+		@Override
+		public void onClick(View v) {
+			// TODO Auto-generated method stub
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+			String currentDateandTime = sdf.format(new Date());
+			Bitmap temp = BitmapFactory.decodeFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+	        		+"/scanner_test3_pic.jpg");
+
+			
+			
+			FileOutputStream out = null;
+			try {
+				File outf = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) +"/fail_"+currentDateandTime+".jpg");
+				outf.createNewFile();
+				out = new FileOutputStream(outf);
+			    temp.compress(Bitmap.CompressFormat.JPEG, 100, out); // bmp is your Bitmap instance
+			    // PNG is a lossless format, the compression factor (100) is ignored
+			} catch (Exception e) {
+			    e.printStackTrace();
+			} finally {
+			    try {
+			        if (out != null) {
+			            out.close();
+			        }
+			    } catch (IOException e) {
+			        e.printStackTrace();
+			    }
+			}
+			
+			success.setVisibility(View.GONE);
+			fail.setVisibility(View.GONE);
+		}
+		
+	}
 	private class ProcessClickListener implements OnClickListener{
 
 		@Override
@@ -145,9 +258,11 @@ public class MainActivity extends ActionBarActivity {
             if(flag){  
                 imageView.setImageBitmap(processBitmap);  
                 change.setText("Check Original");  
+                flip.setVisibility(View.VISIBLE);
                 flag = false;  
             } 
             else{  
+            	flip.setVisibility(View.GONE);
             	imageView.setImageBitmap(srcBitmap);  
                 change.setText(" change ");  
                 flag = true;  
@@ -158,7 +273,7 @@ public class MainActivity extends ActionBarActivity {
 	
 	public void showPic(){
 		srcBitmap = BitmapFactory.decodeFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        		+"/scanner_test2_pic.jpg");
+        		+"/scanner_test3_pic.jpg");
 	}
 	public void processImage(){  
         Mat rgbMat = new Mat();  
@@ -167,7 +282,7 @@ public class MainActivity extends ActionBarActivity {
         
         // find the img file from cell-phone
         srcBitmap = BitmapFactory.decodeFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        		+"/scanner_test2_pic.jpg");
+        		+"/scanner_test3_pic.jpg");
 
         Utils.bitmapToMat(srcBitmap, rgbMat);//convert original bitmap to Mat, R G B. 
         
@@ -226,11 +341,19 @@ public class MainActivity extends ActionBarActivity {
 					
             Mat src_mat=new Mat(4,1,CvType.CV_32FC2);
             Mat dst_mat=new Mat(4,1,CvType.CV_32FC2);
-            src_mat.put(0,0,leftTop.x,leftTop.y,
-            		rightTop.x, rightTop.y, 
-            		leftBot.x, leftBot.y, 
-            		rightBot.x, rightBot.y );
             
+            if(distance(leftTop,rightTop)>distance(leftTop,leftBot)){
+                src_mat.put(0,0,leftTop.x+5,leftTop.y+5,
+                		rightTop.x-5, rightTop.y+5, 
+                		leftBot.x+5, leftBot.y-5, 
+                		rightBot.x-5, rightBot.y-5 );
+            }else{
+                src_mat.put(0,0,rightTop.x-5,rightTop.y+5,
+                		rightBot.x-5, rightBot.y-5, 
+                		leftTop.x+5, leftTop.y+5, 
+                		leftBot.x+5, leftBot.y-5);
+            }
+ 
             dst_mat.put(0,0, 0,0,dst_width,0, 0,dst_height, dst_width,dst_height);
             Mat tempMat = Imgproc.getPerspectiveTransform(src_mat, dst_mat);
             Mat dstMat=rgbMat.clone();
@@ -323,7 +446,7 @@ public class MainActivity extends ActionBarActivity {
 							double cosine = Math.abs(angle(approx.toList().get(j%4), approx.toList().get(j-2), approx.toList().get(j-1)));
 							maxCosine = Math.max(maxCosine, cosine);
 						}
-						if (maxCosine < 0.3){
+						if (maxCosine < 0.46){
 	                        squares.add(approx.toList());
 						}
 					}
@@ -343,6 +466,10 @@ public class MainActivity extends ActionBarActivity {
 	    double dx2 = pt2.x - pt0.x;
 	    double dy2 = pt2.y - pt0.y;
 	    return (dx1*dx2 + dy1*dy2)/Math.sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+	}
+	
+	double distance(Point pt1, Point pt2){
+		return (Math.sqrt((pt1.x-pt2.x)*(pt1.x-pt2.x)+(pt1.y-pt2.y)*(pt1.y-pt2.y)));
 	}
 
 }
